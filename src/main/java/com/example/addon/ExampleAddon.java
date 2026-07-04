@@ -6,6 +6,9 @@ import autismclient.api.ApiVersion;
 
 import com.example.addon.modules.*;
 
+import autismclient.api.macro.MacroActionEntry;
+import com.example.addon.macro.ExtractUsernameAction;
+
 public final class ExampleAddon extends AutismAddon {
     public static final String ID = "autismclient-pvpplus";
 
@@ -32,6 +35,13 @@ public final class ExampleAddon extends AutismAddon {
         AutismAddons.modules().register(new SnapTap());
         AutismAddons.modules().register(new AutoCrit());
         AutismAddons.modules().register(new MaceSwap());
+
+        AutismAddons.macroActions().register(
+            MacroActionEntry.builder(ExtractUsernameAction.TYPE_ID, ExtractUsernameAction::new)
+                .schema(new ExtractUsernameAction().schema())
+                .picker("Flow", "Extract Username", "Extracts usernames from Tablist or Autofill")
+                .build()
+        );
     }
 
     @Override

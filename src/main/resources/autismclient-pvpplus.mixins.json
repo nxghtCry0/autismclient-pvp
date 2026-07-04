@@ -9,7 +9,9 @@
     "KeyMappingAccessor",
     "MinecraftMixin",
     "InventoryAccessor",
-    "MinecraftAccessor"
+    "MinecraftAccessor",
+    "ChatScreenAccessor",
+    "CommandSuggestionsAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
