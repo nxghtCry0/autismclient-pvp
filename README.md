@@ -10,17 +10,20 @@ The original repo for Autism Client can be found [here](https://github.com/Autis
 
 ## Modules:
 
-- AimAssist+
-- AntiHunger
-- Auto Anchor
-- Auto Crystal
-- Auto Totem
-- BetterBoatfly
-- FastPlace
-- Hover Totem
-- PearlCatch
-- Seed X-Ray
-- WTap
+- **AimAssist+**
+- **AntiHunger**
+- **Auto Anchor**
+- **Auto Crit**
+- **Auto Crystal**
+- **Auto Totem**
+- **BetterBoatfly**
+- **FastPlace**
+- **Hover Totem**
+- **MaceSwap**
+- **PearlCatch**
+- **Seed X-Ray** (Uses highly-accurate native Cubiomes simulation, works fully standalone, executes asynchronously on background thread pools, and automatically retrieves integrated server seeds in singleplayer)
+- **SnapTap**
+- **WTap**
 
 # Future Plans
 
