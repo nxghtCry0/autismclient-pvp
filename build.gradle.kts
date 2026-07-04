@@ -9,26 +9,20 @@ base {
 }
 
 repositories {
-    // AUTISM Client is consumed from your local Maven repo. In the AUTISM project run:
-    //     ./gradlew publishToMavenLocal
     mavenLocal()
     maven("https://maven.fabricmc.net/") { name = "Fabric" }
     mavenCentral()
+    maven("https://api.modrinth.com/maven") { name = "Modrinth" }
 }
 
 dependencies {
-    // Mirrors the AUTISM Client build: official Mojang mappings are implicit for the configured version, so there is no
-    // explicit `mappings(...)` line and dependencies use plain `implementation`.
     minecraft(libs.minecraft)
     implementation(libs.fabric.loader)
     implementation(libs.fabric.api)
-
-    // The AUTISM Client API (published to mavenLocal from the AUTISM project).
     implementation(libs.autism)
+    implementation("maven.modrinth:seedmapper-cevapi:0.21")
 }
 
-// Turns an exact Minecraft version (e.g. "26.2") into a compatible range ("~26.2") so the addon
-// keeps loading across patch releases instead of pinning one exact build.
 fun toMinecraftCompat(version: String): String {
     val m = Regex("""^(\d+)\.(\d+)(?:\.(\d+))?$""").matchEntire(version)
         ?: return version
@@ -49,6 +43,14 @@ tasks {
         filteringCharset = "UTF-8"
         filesMatching("fabric.mod.json") {
             expand(propertyMap)
+        }
+    }
+
+    jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        from(configurations.compileClasspath.get().filter { it.name.contains("seedmapper-cevapi") }.map { zipTree(it) }) {
+            exclude("META-INF/**")
+            exclude("fabric.mod.json")
         }
     }
 

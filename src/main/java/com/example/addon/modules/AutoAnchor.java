@@ -4,7 +4,6 @@ import com.example.addon.ExampleAddon;
 import autismclient.modules.Module;
 import autismclient.api.module.BoolSetting;
 import autismclient.api.module.DoubleSetting;
-import autismclient.api.module.IntSetting;
 import autismclient.api.module.ChoiceSetting;
 import autismclient.util.AutismInventoryHelper;
 import autismclient.util.AutismKeyMappingBridge;

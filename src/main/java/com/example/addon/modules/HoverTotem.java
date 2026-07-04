@@ -8,13 +8,11 @@ import autismclient.api.module.IntSetting;
 import autismclient.api.module.ChoiceSetting;
 import autismclient.mixin.accessor.AutismHandledScreenAccessor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.inventory.ContainerInput;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.Arrays;
 import java.util.List;

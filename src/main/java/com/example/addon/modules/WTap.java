@@ -2,11 +2,9 @@ package com.example.addon.modules;
 
 import com.example.addon.ExampleAddon;
 import autismclient.modules.Module;
-import autismclient.modules.ModuleRegistry;
 import autismclient.api.module.BoolSetting;
 import autismclient.api.module.DoubleSetting;
 import autismclient.api.module.ChoiceSetting;
-import autismclient.util.AutismKeyMappingBridge;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.lwjgl.glfw.GLFW;

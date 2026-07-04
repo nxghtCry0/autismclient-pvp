@@ -5,7 +5,11 @@
   "client": [
     "ExampleMixin",
     "AbstractContainerScreenAccessor",
-    "MultiPlayerGameModeMixin"
+    "MultiPlayerGameModeMixin",
+    "KeyMappingAccessor",
+    "MinecraftMixin",
+    "InventoryAccessor",
+    "MinecraftAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

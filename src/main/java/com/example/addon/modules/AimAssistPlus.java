@@ -6,16 +6,11 @@ import autismclient.api.module.BoolSetting;
 import autismclient.api.module.DoubleSetting;
 import autismclient.api.module.ChoiceSetting;
 import autismclient.util.AutismMouseInputSimulator;
-import autismclient.util.AutismRotationUtil;
-
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public final class AimAssistPlus extends Module {
     private final DoubleSetting hSpeed = add(new DoubleSetting("hSpeed", "Horizontal Speed", 20.0, 1.0, 100.0, 1.0));

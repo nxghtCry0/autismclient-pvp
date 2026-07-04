@@ -27,34 +27,24 @@ public final class SeedXRay extends Module {
     private static SeedXRay INSTANCE;
 
     public enum Ore {
-        DIAMOND("Diamond", 0xFF00FFFF, 7, 4, 4, 7, -64, 16),
-        GOLD("Gold", 0xFFFFD700, 4, 4, 9, 4, -64, 32),
-        IRON("Iron", 0xFFD3D3D3, 2, 4, 9, 10, -16, 80),
-        COAL("Coal", 0xFF505050, 0, 4, 17, 30, 0, 192),
-        REDSTONE("Redstone", 0xFFFF0000, 5, 4, 8, 8, -64, 16),
-        LAPIS("Lapis", 0xFF0000FF, 6, 4, 7, 4, -64, 64),
-        EMERALD("Emerald", 0xFF00FF00, 8, 4, 1, 4, -16, 320),
-        COPPER("Copper", 0xFFD2691E, 9, 4, 10, 16, -16, 112);
+        DIAMOND("Diamond", 0xFF00FFFF),
+        GOLD("Gold", 0xFFFFD700),
+        IRON("Iron", 0xFFD3D3D3),
+        COAL("Coal", 0xFF505050),
+        REDSTONE("Redstone", 0xFFFF0000),
+        LAPIS("Lapis", 0xFF0000FF),
+        EMERALD("Emerald", 0xFF00FF00),
+        COPPER("Copper", 0xFFD2691E);
 
         public final String name;
         public final int color;
-        public final int index;
-        public final int step;
-        public final int size;
-        public final int count;
-        public final int minY;
-        public final int maxY;
-        
-        Ore(String name, int color, int index, int step, int size, int count, int minY, int maxY) {
+
+        Ore(String name, int color) {
             this.name = name;
             this.color = color;
-            this.index = index;
-            this.step = step;
-            this.size = size;
-            this.count = count;
-            this.minY = minY;
-            this.maxY = maxY;
         }
+
+
     }
 
     private final StringSetting seed = add(new StringSetting("seed", "World Seed", "0"));
@@ -70,6 +60,7 @@ public final class SeedXRay extends Module {
     private final BoolSetting showCopper = add(new BoolSetting("showCopper", "Show Copper", false));
 
     private final Map<Long, Map<Ore, List<Vec3>>> chunkRenderers = new ConcurrentHashMap<>();
+    private final Set<Long> processingChunks = ConcurrentHashMap.newKeySet();
 
     public static long chunkKey(int x, int z) {
         return ((long) z << 32) | ((long) x & 0xFFFFFFFFL);
@@ -79,7 +70,6 @@ public final class SeedXRay extends Module {
         super(ExampleAddon.ID + ":seedxray", "SeedX-Ray", "Simulates and displays ore locations based on world seed.");
         INSTANCE = this;
 
-        // Register the COLLECT_SUBMITS event globally once
         LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
             if (INSTANCE == null || !INSTANCE.isEnabled() || MC.player == null || MC.level == null) return;
 
@@ -90,7 +80,6 @@ public final class SeedXRay extends Module {
 
             List<RenderTask> renderTasks = new ArrayList<>();
 
-            // Scan local chunks and submit tasks
             for (int dx = -range; dx <= range; dx++) {
                 for (int dz = -range; dz <= range; dz++) {
                     int cx = playerChunkX + dx;
@@ -111,7 +100,7 @@ public final class SeedXRay extends Module {
                             if (INSTANCE.isOreEnabled(ore)) {
                                 for (Vec3 pos : entry.getValue()) {
                                     BlockPos bp = BlockPos.containing(pos.x, pos.y, pos.z);
-                                    if (MC.level.getBlockState(bp).isAir()) continue;
+                                    if (!INSTANCE.isValidOreTarget(MC.level.getBlockState(bp), ore)) continue;
 
                                     AABB box = new AABB(bp).move(-camera.x, -camera.y, -camera.z);
                                     renderTasks.add(new RenderTask(box, ore.color));
@@ -150,6 +139,14 @@ public final class SeedXRay extends Module {
     }
 
     private long getWorldSeed() {
+        if (seed.get().equals("0") || seed.get().trim().isEmpty()) {
+            if (MC.getSingleplayerServer() != null) {
+                var worldGenSettings = MC.getSingleplayerServer().getWorldGenSettings();
+                if (worldGenSettings != null) {
+                    return worldGenSettings.options().seed();
+                }
+            }
+        }
         try {
             return Long.parseLong(seed.get().trim());
         } catch (NumberFormatException e) {
@@ -160,8 +157,39 @@ public final class SeedXRay extends Module {
     private void doMathOnChunk(ChunkAccess chunk) {
         ChunkPos chunkPos = chunk.getPos();
         long chunkKey = chunkKey(chunkPos.x(), chunkPos.z());
-        if (chunkRenderers.containsKey(chunkKey)) return;
+        if (chunkRenderers.containsKey(chunkKey) || !processingChunks.add(chunkKey)) return;
 
+        long seedValue = SeedMapperHelper.getSeedValue(getWorldSeed());
+        int version = SeedMapperHelper.getCubiomesVersion();
+        int dimension = getCubiomesDimension(SeedMapperHelper.getNetherDim(), SeedMapperHelper.getEndDim(), SeedMapperHelper.getOverworldDim());
+        int cx = chunkPos.x();
+        int cz = chunkPos.z();
+
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                var ores = SeedMapperHelper.generateOres(cx, cz, seedValue, version, dimension);
+                chunkRenderers.put(chunkKey, ores);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            } finally {
+                processingChunks.remove(chunkKey);
+            }
+        });
+    }
+
+    private int getCubiomesDimension(int nether, int end, int overworld) {
+        if (MC.level == null) return overworld;
+        var key = MC.level.dimension();
+        if (key == net.minecraft.world.level.Level.NETHER) {
+            return nether;
+        } else if (key == net.minecraft.world.level.Level.END) {
+            return end;
+        }
+        return overworld;
+    }
+
+    private void doJavaMath(ChunkAccess chunk) {
+        ChunkPos chunkPos = chunk.getPos();
         long seedValue = getWorldSeed();
         int chunkX = chunkPos.x() << 4;
         int chunkZ = chunkPos.z() << 4;
@@ -173,28 +201,104 @@ public final class SeedXRay extends Module {
 
         for (Ore ore : Ore.values()) {
             List<Vec3> ores = new ArrayList<>();
-            random.setFeatureSeed(populationSeed, ore.index, ore.step);
+            int index = getOreIndex(ore);
+            int step = getOreStep(ore);
+            int size = getOreSize(ore);
+            int count = getOreCount(ore);
 
-            int repeat = ore.count;
-            for (int i = 0; i < repeat; i++) {
+            random.setFeatureSeed(populationSeed, index, step);
+
+            for (int i = 0; i < count; i++) {
                 int x = random.nextInt(16) + chunkX;
                 int z = random.nextInt(16) + chunkZ;
-                
-                int y;
-                if (ore.minY >= ore.maxY) {
-                    y = ore.minY;
-                } else {
-                    y = random.nextInt(ore.maxY - ore.minY + 1) + ore.minY;
-                }
+                int y = sampleHeight(random, ore);
                 
                 BlockPos origin = new BlockPos(x, y, z);
-                ores.addAll(generateNormal(MC.level, random, origin, ore.size));
+                ores.addAll(generateNormal(MC.level, random, origin, size));
             }
             if (!ores.isEmpty()) {
                 chunkOres.put(ore, ores);
             }
         }
-        chunkRenderers.put(chunkKey, chunkOres);
+        chunkRenderers.put(chunkKey(chunkPos.x(), chunkPos.z()), chunkOres);
+    }
+
+    private int getOreIndex(Ore ore) {
+        return switch (ore) {
+            case COAL -> 0;
+            case IRON -> 2;
+            case GOLD -> 4;
+            case REDSTONE -> 5;
+            case LAPIS -> 6;
+            case DIAMOND -> 7;
+            case EMERALD -> 8;
+            case COPPER -> 9;
+        };
+    }
+
+    private int getOreStep(Ore ore) {
+        return 4;
+    }
+
+    private int getOreSize(Ore ore) {
+        return switch (ore) {
+            case COAL -> 17;
+            case IRON -> 9;
+            case GOLD -> 9;
+            case REDSTONE -> 8;
+            case LAPIS -> 7;
+            case DIAMOND -> 4;
+            case EMERALD -> 1;
+            case COPPER -> 10;
+        };
+    }
+
+    private int getOreCount(Ore ore) {
+        return switch (ore) {
+            case COAL -> 30;
+            case IRON -> 10;
+            case GOLD -> 4;
+            case REDSTONE -> 8;
+            case LAPIS -> 4;
+            case DIAMOND -> 7;
+            case EMERALD -> 4;
+            case COPPER -> 16;
+        };
+    }
+
+    private int sampleHeight(WorldgenRandom random, Ore ore) {
+        return switch (ore) {
+            case DIAMOND -> {
+                int y = 0 + random.nextInt(81) - random.nextInt(81);
+                yield Math.max(-64, Math.min(16, y));
+            }
+            case GOLD -> {
+                yield random.nextInt(32 - (-64) + 1) - 64;
+            }
+            case IRON -> {
+                int y = 16 + random.nextInt(41) - random.nextInt(41);
+                yield Math.max(-64, Math.min(320, y));
+            }
+            case COAL -> {
+                yield random.nextInt(192 + 1);
+            }
+            case REDSTONE -> {
+                int y = 0 + random.nextInt(81) - random.nextInt(81);
+                yield Math.max(-64, Math.min(-32, y));
+            }
+            case LAPIS -> {
+                int y = 32 + random.nextInt(65) - random.nextInt(65);
+                yield Math.max(-64, Math.min(64, y));
+            }
+            case EMERALD -> {
+                int y = 232 + random.nextInt(249) - random.nextInt(249);
+                yield Math.max(-16, Math.min(320, y));
+            }
+            case COPPER -> {
+                int y = 48 + random.nextInt(65) - random.nextInt(65);
+                yield Math.max(-16, Math.min(112, y));
+            }
+        };
     }
 
     private ArrayList<Vec3> generateNormal(ClientLevel world, WorldgenRandom random, BlockPos blockPos, int veinSize) {
@@ -309,6 +413,23 @@ public final class SeedXRay extends Module {
         }
 
         return poses;
+    }
+
+    private boolean isValidOreTarget(net.minecraft.world.level.block.state.BlockState state, Ore ore) {
+        net.minecraft.world.level.block.Block block = state.getBlock();
+        String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block).getPath().toLowerCase();
+        
+        if (name.contains(ore.name.toLowerCase())) {
+            return true;
+        }
+
+        return block == net.minecraft.world.level.block.Blocks.STONE
+            || block == net.minecraft.world.level.block.Blocks.DEEPSLATE
+            || block == net.minecraft.world.level.block.Blocks.TUFF
+            || block == net.minecraft.world.level.block.Blocks.ANDESITE
+            || block == net.minecraft.world.level.block.Blocks.DIORITE
+            || block == net.minecraft.world.level.block.Blocks.GRANITE
+            || block == net.minecraft.world.level.block.Blocks.NETHERRACK;
     }
 
     private static void renderBox(com.mojang.blaze3d.vertex.PoseStack.Pose pose, com.mojang.blaze3d.vertex.VertexConsumer buffer, AABB box, int color) {

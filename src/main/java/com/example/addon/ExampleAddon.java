@@ -28,6 +28,10 @@ public final class ExampleAddon extends AutismAddon {
         AutismAddons.modules().register(new WTap());
         AutismAddons.modules().register(new AntiHunger());
         AutismAddons.modules().register(new SeedXRay());
+
+        AutismAddons.modules().register(new SnapTap());
+        AutismAddons.modules().register(new AutoCrit());
+        AutismAddons.modules().register(new MaceSwap());
     }
 
     @Override
